@@ -141,6 +141,7 @@ public class HypoMachine {
 		}
 		
 		ir = mbr;
+		int change = 1;
 		
 		//Decode cycle
 		
