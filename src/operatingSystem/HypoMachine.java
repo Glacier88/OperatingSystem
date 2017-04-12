@@ -1,36 +1,38 @@
+package operatingSystem;
+
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.Scanner;
 
 public class HypoMachine {
 	
-	private static final int OKAY = 0;
+	public static final int OKAY = 0;
 	
 	//Error code constants
-	private static final int ERROR_FILE_OPEN = 1;
-	private static final int ERROR_INVALID_ADDR = 2;
-	private static final int ERROR_NO_END_OF_PROGRAM = 3;
-	private static final int ERROR_IMMEDIATE_MODE = 4;	
-	private static final int END_OF_PROGRAM = -1;
-	private static final int RUNTIME_ERROR = 5;
-	private static final int ERROR_STACK_OVERFLOW = 6;
-	private static final int ERROR_STACK_UNDERFLOW = 7;
-	private static final int ERROR_INVALID_OPCODE = 8;
-	private static final int ERROR_INVALID_OPMODE = 9;
+	public static final int ERROR_FILE_OPEN = -1;
+	public static final int ERROR_INVALID_ADDR = -2;
+	public static final int ERROR_NO_END_OF_PROGRAM = -3;
+	public static final int ERROR_IMMEDIATE_MODE = -4;	
+	public static final int END_OF_PROGRAM = -1;
+	public static final int RUNTIME_ERROR = -5;
+	public static final int ERROR_STACK_OVERFLOW = -6;
+	public static final int ERROR_STACK_UNDERFLOW = -7;
+	public static final int ERROR_INVALID_OPCODE = -8;
+	public static final int ERROR_INVALID_OPMODE = -9;
 	
-	private static final int MEMORY_LIMIT = 10000;
-	private static final int STACK_UPPER_BOUND = 10000;
+	public static final int MEMORY_LIMIT = 10000;
+	public static final int STACK_UPPER_BOUND = 10000;
 	
-	private static final int HALT = 0;
+	public static final int HALT = 0;
 	
 	//Addressing modes constants
-	private static final long INVALID_MODE = 0;
-	private static final long REGISTER_MODE = 1;
-	private static final long REGISTER_DEFERRED = 2;
-	private static final long AUTO_INCREMENT = 3;
-	private static final long AUTO_DECREMENT = 4;
-	private static final long DIRECT_MODE = 5;
-	private static final long IMMEDIATE_MODE = 6;
+	public static final long INVALID_MODE = 0;
+	public static final long REGISTER_MODE = 1;
+	public static final long REGISTER_DEFERRED = 2;
+	public static final long AUTO_INCREMENT = 3;
+	public static final long AUTO_DECREMENT = 4;
+	public static final long DIRECT_MODE = 5;
+	public static final long IMMEDIATE_MODE = 6;
 	
 	//Hpyo memory array
 	long[] memory;
