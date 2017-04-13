@@ -2,6 +2,8 @@ package operatingSystem;
 
 public class MTOPS extends HypoMachine{
 	int processID;
+	
+	long WQ = 0;
 	//long RQ
 	//LONG OSFreeList
 	//long UserFreeList
@@ -32,7 +34,10 @@ public class MTOPS extends HypoMachine{
 	
 	private static final long DEFAULT_PRIORITY = 128;
 	private static final long READY_STATE = 1;
-	private static final long END_OF_LIST = -1;
+	private static final long END_OF_LIST = 10000;
+	
+	//Constants of PCB states
+	private static final long WAITING = 1;
 	
 	private static final int PCB_SIZE = 22;	
 	//Initial stack size assigned to each process
@@ -114,27 +119,36 @@ public class MTOPS extends HypoMachine{
 		System.out.println("PID = " + PID);
 		System.out.println("State = " + STATE);
 		System.out.println("Reason for waiting code = " + REASON_FOR_WAITING);
-		memory[(int)PCBptr + PRIORITY] = 0;
-		memory[(int)PCBptr + STACK_START_ADDR] = 0;
-		memory[(int)PCBptr + PCB_STACK_SIZE] = 0;
-		memory[(int)PCBptr + MQ_START_ADDR] = 0;
-		memory[(int)PCBptr + MQ_SIZE] = 0;
-		memory[(int)PCBptr + NUM_OF_MS_IN_MQ] = 0;
-		memory[(int)PCBptr + GPR0] = 0;
-		memory[(int)PCBptr + GPR1] = 0;
-		memory[(int)PCBptr + GPR2] = 0;
-		memory[(int)PCBptr + GPR3] = 0;
-		memory[(int)PCBptr + GPR4] = 0;
-		memory[(int)PCBptr + GPR5] = 0;
-		memory[(int)PCBptr + GPR6] = 0;
-		memory[(int)PCBptr + GPR7] = 0;
-		memory[(int)PCBptr + SP] = 0;
-		memory[(int)PCBptr + PC] = 0;
-		memory[(int)PCBptr + PSR] = 0;
+		System.out.println("Priority = " + PRIORITY);
+		System.out.println("Stack start address = " + STACK_START_ADDR);
+		System.out.println("Stack size = " + PCB_STACK_SIZE);
+		System.out.println("Message queue start address = " + MQ_START_ADDR);
+		System.out.println("Message queue size = " + MQ_SIZE);
+		System.out.println("Number of messages in queue = " + NUM_OF_MS_IN_MQ);
+		System.out.println("GPR0 = " + GPR0);
+		System.out.println("GPR1 = " + GPR1);
+		System.out.println("GPR2 = " + GPR2);
+		System.out.println("GPR3 = " + GPR3);
+		System.out.println("GPR4 = " + GPR4);
+		System.out.println("GPR5 = " + GPR5);
+		System.out.println("GPR6 = " + GPR6);
+		System.out.println("GPR7 = " + GPR7);
+		System.out.println("SP = " + SP);
+		System.out.println("PC = " + PC);
+		System.out.println("PSR = " + PSR);
 	}
 	
 	long printQueue(long Qptr) {
-		return 0;
+		long currentPCBptr = Qptr;
+		if (currentPCBptr == END_OF_LIST) {
+			System.out.println("Empty list message");
+			return OKAY;
+		}
+		while(currentPCBptr < END_OF_LIST) {
+			printPCB(currentPCBptr);
+			currentPCBptr = memory[(int)currentPCBptr];
+		}
+		return OKAY;
 	}
 	
 	long insertIntoReadyQ(long PCBptr) {
@@ -142,7 +156,14 @@ public class MTOPS extends HypoMachine{
 	}
 	
 	long insertIntoWQ(long PCBptr) {
-		return 0;
+		if(PCBptr < 0 || PCBptr > MEMORY_LIMIT) {
+			System.out.println("Invalid PCB error message!");
+			return ERROR_INVALID_ADDR;
+		}
+		memory[(int)PCBptr + STATE] = WAITING;
+		memory[(int)PCBptr + NEXT_PCB_PTR] = WQ;
+		WQ = PCBptr;
+		return OKAY;
 	}
 	
 	long selectProcessFromRQ() {
