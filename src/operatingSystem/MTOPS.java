@@ -4,7 +4,7 @@ public class MTOPS extends HypoMachine{
 	int processID;
 	
 	long WQ = 0;
-	//long RQ
+	long RQ = 0;
 	//LONG OSFreeList
 	//long UserFreeList
 	
@@ -31,6 +31,9 @@ public class MTOPS extends HypoMachine{
 	private static final int PC = 20;
 	private static final int PSR = 21;
 	
+	//PSR mode
+	private static final long USER_MODE = 2;
+	private static final long OS_MODE = 1;
 	
 	private static final long DEFAULT_PRIORITY = 128;
 	private static final long READY_STATE = 1;
@@ -167,19 +170,55 @@ public class MTOPS extends HypoMachine{
 	}
 	
 	long selectProcessFromRQ() {
-		return 0;
+		long PCBptr = RQ;
+		if(RQ != END_OF_LIST) {
+			RQ = memory[(int)PCBptr + NEXT_PCB_PTR]; 
+		}
+		memory[(int)PCBptr + NEXT_PCB_PTR] = END_OF_LIST;
+		return PCBptr;
 	}
 	
 	void saveContext(long PCBptr) {
 		
+		memory[(int)PCBptr + GPR0] = cpuRegisters[0];
+		memory[(int)PCBptr + GPR1] = cpuRegisters[1];
+		memory[(int)PCBptr + GPR2] = cpuRegisters[2];
+		memory[(int)PCBptr + GPR3] = cpuRegisters[3];
+		memory[(int)PCBptr + GPR4] = cpuRegisters[4];
+		memory[(int)PCBptr + GPR5] = cpuRegisters[5];
+		memory[(int)PCBptr + GPR6] = cpuRegisters[6];
+		memory[(int)PCBptr + GPR7] = cpuRegisters[7];
+		//Set SP field in the PCB
+		memory[(int)PCBptr + SP] = sp;
+		//Set PC field in the PCB
+		memory[(int)PCBptr + PC] = pc;
 	}
 	
 	void dispatcher(long PCBptr) {
 		
+		//Copy CPU GPR register values from PCB to CPU registers
+		cpuRegisters[0] = memory[(int)PCBptr + GPR0];
+		cpuRegisters[1] = memory[(int)PCBptr + GPR1];
+		cpuRegisters[2] = memory[(int)PCBptr + GPR2];
+		cpuRegisters[3] = memory[(int)PCBptr + GPR3];
+		cpuRegisters[4] = memory[(int)PCBptr + GPR4];
+		cpuRegisters[5] = memory[(int)PCBptr + GPR5]; 
+		cpuRegisters[6] = memory[(int)PCBptr + GPR6];
+		cpuRegisters[7] = memory[(int)PCBptr + GPR7];
+		
+		//Restore SP and PC from given PCB
+		sp = memory[(int)PCBptr + SP];
+		pc = memory[(int)PCBptr + PC];
+		
+		//Set system mode to user mode
+		psr = USER_MODE;
 	}
 	
 	void terminateProcess(long PCBptr) {
+		//Return stack memory using stack start address and 
+		// stack size
 		
+		//Return PCB memory using the PCBptr
 	}
 	
 	long allocateOSmemory(long requestedSize) {
