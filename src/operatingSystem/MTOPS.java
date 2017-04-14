@@ -5,7 +5,7 @@ public class MTOPS extends HypoMachine{
 	
 	long WQ = 0;
 	long RQ = 0;
-	//LONG OSFreeList
+	long OSFreeList = 0;
 	//long UserFreeList
 	
 	//Index of PCB array
@@ -34,6 +34,9 @@ public class MTOPS extends HypoMachine{
 	//PSR mode
 	private static final long USER_MODE = 2;
 	private static final long OS_MODE = 1;
+	
+	private static final int ERROR_NO_FREE_MEMORY = -10;
+	private static final int ERROR_INVALID_MEM_SIZE = -11;
 	
 	private static final long DEFAULT_PRIORITY = 128;
 	private static final long READY_STATE = 1;
@@ -222,6 +225,23 @@ public class MTOPS extends HypoMachine{
 	}
 	
 	long allocateOSmemory(long requestedSize) {
+		if(OSFreeList == END_OF_LIST) {
+			System.out.println("No free OS memory!");
+			return ERROR_NO_FREE_MEMORY;
+		}
+		if(requestedSize < 0) {
+			System.out.println("Invalid size error!");
+			return ERROR_INVALID_MEM_SIZE;
+		}
+		//Minimum allocated memory is 2
+		if(requestedSize == 1)
+			requestedSize = 2;
+		long currentPtr = OSFreeList;
+		long previousPtr = END_OF_LIST;
+		while(currentPtr != END_OF_LIST) {
+			//Check each block in the link list until block with requested 
+			//memory size is found
+		}
 		return 0;
 	}
 	
