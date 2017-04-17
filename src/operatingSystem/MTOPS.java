@@ -6,7 +6,7 @@ public class MTOPS extends HypoMachine{
 	long WQ = 0;
 	long RQ = 0;
 	long OSFreeList = 0;
-	//long UserFreeList
+	long userFreeList = 0;
 	
 	//Index of PCB array
 	private static final int NEXT_PCB_PTR = 0;
@@ -158,7 +158,48 @@ public class MTOPS extends HypoMachine{
 	}
 	
 	long insertIntoReadyQ(long PCBptr) {
-		return 0;
+		
+		//Insert PCB according to Round Robin.
+		long previousPtr = END_OF_LIST;
+		long currentPtr = RQ;
+		if(PCBptr < 0) {
+			System.out.println("Invalid memory address!");
+			return ERROR_INVALID_ADDR;
+		}
+		memory[(int)PCBptr + STATE] = READY_STATE; 
+		memory[(int)PCBptr + NEXT_PCB_PTR] = END_OF_LIST;
+		
+		//RQ is empty
+		if(RQ == END_OF_LIST) {
+			RQ = PCBptr;
+			return OKAY;
+		}
+		
+		//Walk through RQ and find the place to insert
+		//PCB will be inserted at the end of its priority
+		while(currentPtr != END_OF_LIST) {
+			if(memory[(int)(PCBptr + PRIORITY)] > memory[(int)(currentPtr + PRIORITY)]) {
+				//found the place to insert
+				if(previousPtr == END_OF_LIST) {
+					//Enter the PCB in the front of the list as first entry
+					memory[(int)PCBptr + NEXT_PCB_PTR] = RQ;
+					RQ = PCBptr;
+					return OKAY;
+				}
+				
+				//Enter PCB in the middle of the list
+				memory[(int)PCBptr + NEXT_PCB_PTR] = memory[(int)previousPtr + NEXT_PCB_PTR];
+				memory[(int)previousPtr + NEXT_PCB_PTR] = PCBptr;
+				return OKAY;
+			} else {
+				//PCB to be inserted has lower or equal priority to the current PCB in RQ
+				previousPtr = currentPtr;
+				currentPtr = memory[(int)currentPtr + NEXT_PCB_PTR];
+			}
+		}
+		//Insert PCB at the end of RQ
+		memory[(int)previousPtr + NEXT_PCB_PTR] = PCBptr;
+		return OKAY;
 	}
 	
 	long insertIntoWQ(long PCBptr) {
@@ -217,11 +258,15 @@ public class MTOPS extends HypoMachine{
 		psr = USER_MODE;
 	}
 	
+	//Recover all resources allocated to the process
 	void terminateProcess(long PCBptr) {
-		//Return stack memory using stack start address and 
-		// stack size
-		
+		//Return stack memory using stack start address and stack size
+		long i = memory[(int)PCBptr + STACK_START_ADDR];
+		while(i < memory[(int)PCBptr + STACK_SIZE]) {
+			memory[(int)i] = 0;
+		}
 		//Return PCB memory using the PCBptr
+		memory[(int)PCBptr + NEXT_PCB_PTR] = 0;
 	}
 	
 	long allocateOSmemory(long requestedSize) {
@@ -241,18 +286,164 @@ public class MTOPS extends HypoMachine{
 		while(currentPtr != END_OF_LIST) {
 			//Check each block in the link list until block with requested 
 			//memory size is found
+			if(memory[(int)currentPtr + 1] == requestedSize) {
+				//Found block with requested size
+				if(currentPtr == OSFreeList) {
+					//First entry is pointer to next week
+					OSFreeList = memory[(int)currentPtr];
+					//Reset next pointer in the allocated block
+					memory[(int)currentPtr] = END_OF_LIST;
+					//Return memory address
+					return currentPtr;
+				} else {
+					//Not first black
+					memory[(int)previousPtr] = memory[(int)currentPtr];
+					memory[(int)currentPtr] = END_OF_LIST;
+					return currentPtr;
+				}
+			} else if (memory[(int)currentPtr + 1] > requestedSize) {
+				//Found block with size greater than the requested size
+				
+				//First block
+				if(currentPtr == OSFreeList) {
+					memory[(int)(currentPtr + requestedSize)] = memory[(int)currentPtr];
+					memory[(int)(currentPtr + requestedSize + 1)] = 
+							memory[(int)(currentPtr + 1)] - (int)requestedSize;
+					//Address of reduced block
+					OSFreeList = currentPtr + requestedSize;
+					memory[(int)currentPtr] = END_OF_LIST;
+					return currentPtr;
+				} else {
+					//Not first block
+					
+					//Move next block ptr
+					memory[(int)(currentPtr + requestedSize)] 
+							= memory[(int)currentPtr];
+					memory[(int)(currentPtr + requestedSize + 1)] 
+							= memory[(int)(currentPtr + 1)] - requestedSize;
+					
+					//Address of reduced block
+					memory[(int)previousPtr] = currentPtr + requestedSize;
+					
+					//Reset next pointer in the allocated block
+					memory[(int)currentPtr] = END_OF_LIST;
+					
+					return currentPtr;	
+				}
+			//Small block
+			} else {
+				//Look at next block
+				previousPtr = currentPtr;
+				currentPtr = memory[(int)currentPtr];
+			}
+			
+			
 		}
-		return 0;
+		//Display no free OS memory error
+		System.out.println("No free OS memory error!");
+		return ERROR_NO_FREE_MEMORY;
 	}
 	
+	//Return OK or error code
 	long freeOSmemory(long ptr, long size) {
-		return 0;
+		if(ptr < 0 || ptr > OSFreeList) {
+			System.out.println("Invalid errmr message");
+			return ERROR_INVALID_ADDR;
+		}
+		//Check for minimum allocated size, which is 2 even if a user asks for 1 location
+		if(size == 1) {
+			size = 2;
+		//Invalid size
+		} else if (size < 1 || (ptr + size) >= MEMORY_LIMIT) {
+			System.out.println("Invalid size or address error.");
+			return ERROR_INVALID_ADDR;
+		}
+		//Return the memory to OS free space and insert at the beginning of the linked list
+		//**What is this linked list?**
+		
+		
+		//Make the given free block point to free block pointed by the OS free list
+		//Set the free block size in the given free block
+		OSFreeList = ptr;
+		
+		return OKAY;
 	}
 	
-	long allocateUserMemory(long size) {
-		return 0;
+	long allocateUserMemory(long requestedSize) {
+		if(userFreeList == END_OF_LIST) {
+			System.out.println("No free OS memory!");
+			return ERROR_NO_FREE_MEMORY;
+		}
+		if(requestedSize < 0) {
+			System.out.println("Invalid size error!");
+			return ERROR_INVALID_MEM_SIZE;
+		}
+		//Minimum allocated memory is 2
+		if(requestedSize == 1)
+			requestedSize = 2;
+		long currentPtr = userFreeList;
+		long previousPtr = END_OF_LIST;
+		while(currentPtr != END_OF_LIST) {
+			//Check each block in the link list until block with requested 
+			//memory size is found
+			if(memory[(int)currentPtr + 1] == requestedSize) {
+				//Found block with requested size
+				if(currentPtr == userFreeList) {
+					//First entry is pointer to next block
+					userFreeList = memory[(int)currentPtr];
+					//Reset next pointer in the allocated block
+					memory[(int)currentPtr] = END_OF_LIST;
+					//Return memory address
+					return currentPtr;
+				} else {
+					//Not first black
+					memory[(int)previousPtr] = memory[(int)currentPtr];
+					memory[(int)currentPtr] = END_OF_LIST;
+					return currentPtr;
+				}
+			} else if (memory[(int)currentPtr + 1] > requestedSize) {
+				//Found block with size greater than the requested size
+				
+				//First block
+				if(currentPtr == userFreeList) {
+					memory[(int)(currentPtr + requestedSize)] = memory[(int)currentPtr];
+					memory[(int)(currentPtr + requestedSize + 1)] = 
+							memory[(int)(currentPtr + 1)] - (int)requestedSize;
+					//Address of reduced block
+					userFreeList = currentPtr + requestedSize;
+					memory[(int)currentPtr] = END_OF_LIST;
+					return currentPtr;
+				} else {
+					//Not first block
+					
+					//Move next block ptr
+					memory[(int)(currentPtr + requestedSize)] 
+							= memory[(int)currentPtr];
+					memory[(int)(currentPtr + requestedSize + 1)] 
+							= memory[(int)(currentPtr + 1)] - requestedSize;
+					
+					//Address of reduced block
+					memory[(int)previousPtr] = currentPtr + requestedSize;
+					
+					//Reset next pointer in the allocated block
+					memory[(int)currentPtr] = END_OF_LIST;
+					
+					return currentPtr;	
+				}
+			//Small block
+			} else {
+				//Look at next block
+				previousPtr = currentPtr;
+				currentPtr = memory[(int)currentPtr];
+			}		
+		}
+		//Display no free User memory error
+		System.out.println("No free OS memory error!");
+		return ERROR_NO_FREE_MEMORY;
 	}
 	
+	
+	//This is similar to FreeOSmemory
 	long freeUserMemory(long ptr, long size) {
 		return 0;
 	}
