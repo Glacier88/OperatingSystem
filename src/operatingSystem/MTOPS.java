@@ -1,5 +1,9 @@
 package operatingSystem;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
 public class MTOPS extends HypoMachine{
 	int processID;
 	
@@ -44,6 +48,7 @@ public class MTOPS extends HypoMachine{
 	
 	//Constants of PCB states
 	private static final long WAITING = 1;
+	private static final long READY = 0;
 	
 	private static final int PCB_SIZE = 22;	
 	//Initial stack size assigned to each process
@@ -449,14 +454,86 @@ public class MTOPS extends HypoMachine{
 	}
 	
 	void checkAndProcessInterrupt() {
+		int interruptId = 0;
+		
+		//Prompt and read interrupt ID
+		System.out.println("Please input the interrput ID: ");
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		try {
+			interruptId = Integer.parseInt(br.readLine());
+		} catch (NumberFormatException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		System.out.println("The interrupt ID is: " + interruptId);
+		
+		switch(interruptId) {
+			case 0: //No interrupt
+				break;
+			case 1: //Run program
+				ISRrunProgramInterrupt();
+				break;
+			case 2: // Shut down system
+				ISRshutdownSystem();
+				break;
+			case 3: //Input operation completion - io_getc
+				ISRinputCompletionInterrupt();
+				break;
+			case 4: //Output operation completion - io_putc
+				ISRoutputCompletionInterrupt();
+				break;
+			default: //Invalid interrupt ID
+				System.out.println("Invalid interrupt ID!");
+				break;
+		}
 		
 	}
 	
 	void ISRrunProgramInterrupt() {
-		
+		System.out.println("Please input file name: ");
+		String fileName = null;
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		try {
+			fileName = br.readLine();
+		} catch (NumberFormatException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		createProcess(fileName,DEFAULT_PRIORITY);
 	}
 	
 	void ISRinputCompletionInterrupt() {
+		System.out.println("Please input a process ID: ");
+		int processID = 0;
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		try {
+			processID = Integer.parseInt(br.readLine());
+		} catch (NumberFormatException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		//Search WQ
+		long currentPtr = WQ;
+		long previousPtr = 0;
+		while(currentPtr != END_OF_LIST) {
+			if(currentPtr == processID) {
+				//Remove PCB from the WQ
+				removeProcessFromWQ(currentPtr);
+				memory[(int)currentPtr + STATE] = READY;
+				insertIntoReadyQ(currentPtr);
+				return;
+			}
+			currentPtr = memory[(int)currentPtr];
+		}
+		
+		//If no match is found in WQ, then search RQ
+		
+		System.out.println("Invalid process ID!");
+	}
+	
+	void removeProcessFromWQ(long processID) {
 		
 	}
 	
