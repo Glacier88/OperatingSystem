@@ -506,6 +506,7 @@ public class MTOPS extends HypoMachine{
 	void ISRinputCompletionInterrupt() {
 		System.out.println("Please input a process ID: ");
 		int processID = 0;
+		char inputFromKeyboard = '\0';
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		try {
 			processID = Integer.parseInt(br.readLine());
@@ -516,12 +517,24 @@ public class MTOPS extends HypoMachine{
 		
 		//Search WQ
 		long currentPtr = WQ;
-		long previousPtr = 0;
 		while(currentPtr != END_OF_LIST) {
 			if(currentPtr == processID) {
 				//Remove PCB from the WQ
 				removeProcessFromWQ(currentPtr);
+				//Read one character from standard input device keyboard
+				try {
+					inputFromKeyboard = br.readLine().charAt(0);
+				} catch (NumberFormatException | IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				//Store the character in the GPR
+				memory[(int)currentPtr + GPR0] = (long)inputFromKeyboard;
+				
+				//Set process state to ready in the PCB
 				memory[(int)currentPtr + STATE] = READY;
+				
+				//Insert PCB into RQ
 				insertIntoReadyQ(currentPtr);
 				return;
 			}
@@ -529,6 +542,19 @@ public class MTOPS extends HypoMachine{
 		}
 		
 		//If no match is found in WQ, then search RQ
+		currentPtr = RQ;
+		while(currentPtr != END_OF_LIST) {
+			if(currentPtr == processID) {
+				try {
+					inputFromKeyboard = br.readLine().charAt(0);
+				} catch (NumberFormatException | IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				//Store the character in the GPR
+				memory[(int)currentPtr + GPR0] = (long)inputFromKeyboard;
+			}
+		}
 		
 		System.out.println("Invalid process ID!");
 	}
@@ -538,10 +564,67 @@ public class MTOPS extends HypoMachine{
 	}
 	
 	void ISRoutputCompletionInterrupt() {
+		System.out.println("Please input a process ID: ");
+		int processID = 0;
+		char output = '\0';
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		try {
+			processID = Integer.parseInt(br.readLine());
+		} catch (NumberFormatException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
+		//Search WQ
+		long currentPtr = WQ;
+		while(currentPtr != END_OF_LIST) {
+			if(currentPtr == processID) {
+				//Remove PCB from the WQ
+				removeProcessFromWQ(currentPtr);
+				
+				//Print one character from standard input device keyboard
+				System.out.println("The character in the GPR: " 
+						+ memory[(int)currentPtr + GPR0]);				
+				
+				//Set process state to ready in the PCB
+				memory[(int)currentPtr + STATE] = READY;
+				
+				//Insert PCB into RQ
+				insertIntoReadyQ(currentPtr);
+				return;
+			}
+			currentPtr = memory[(int)currentPtr];
+		}
+		
+		//If no match is found in WQ, then search RQ
+		currentPtr = RQ;
+		while(currentPtr != END_OF_LIST) {
+			if(currentPtr == processID) {
+				//Print one character from standard input device keyboard
+				System.out.println("The character in the GPR: " 
+						+ memory[(int)currentPtr + GPR0]);	
+			}
+		}
+		
+		System.out.println("Invalid process ID!");
 	}
 	
 	void ISRshutdownSystem() {
+		long ptr = RQ;
+		
+		//Terminate all processes in RQ one by one
+		while(ptr != END_OF_LIST) {
+			RQ = memory[(int)ptr + NEXT_PCB_PTR];
+			terminateProcess(ptr);
+			ptr = RQ;
+		}
+		
+		//Terminate all processes in WQ one by one
+		while(ptr != END_OF_LIST) {
+			WQ = memory[(int)ptr + NEXT_PCB_PTR];
+			terminateProcess(ptr);
+			ptr = WQ;
+		}
 		
 	}
 	
