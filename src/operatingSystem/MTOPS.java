@@ -12,6 +12,11 @@ public class MTOPS extends HypoMachine{
 	long OSFreeList = 0;
 	long userFreeList = 0;
 	
+	private static final int USER_FREE_LIST_START = 0;
+	private static final int OS_FREE_LIST_START = 0;
+	
+	private static final long TIMESLICE = 200;
+	
 	//Index of PCB array
 	private static final int NEXT_PCB_PTR = 0;
 	private static final int PID = 1;
@@ -38,6 +43,9 @@ public class MTOPS extends HypoMachine{
 	//PSR mode
 	private static final long USER_MODE = 2;
 	private static final long OS_MODE = 1;
+	
+	private static final long INPUT_OPERATION_EVENT = 0;
+	private static final long OUTPUT_OPERATION_EVENT = 0;
 	
 	private static final int ERROR_NO_FREE_MEMORY = -10;
 	private static final int ERROR_INVALID_MEM_SIZE = -11;
@@ -520,7 +528,7 @@ public class MTOPS extends HypoMachine{
 		while(currentPtr != END_OF_LIST) {
 			if(currentPtr == processID) {
 				//Remove PCB from the WQ
-				removeProcessFromWQ(currentPtr);
+				searchAndRemovePCBfromWQ(currentPtr);
 				//Read one character from standard input device keyboard
 				try {
 					inputFromKeyboard = br.readLine().charAt(0);
@@ -559,10 +567,6 @@ public class MTOPS extends HypoMachine{
 		System.out.println("Invalid process ID!");
 	}
 	
-	void removeProcessFromWQ(long processID) {
-		
-	}
-	
 	void ISRoutputCompletionInterrupt() {
 		System.out.println("Please input a process ID: ");
 		int processID = 0;
@@ -580,7 +584,7 @@ public class MTOPS extends HypoMachine{
 		while(currentPtr != END_OF_LIST) {
 			if(currentPtr == processID) {
 				//Remove PCB from the WQ
-				removeProcessFromWQ(currentPtr);
+				searchAndRemovePCBfromWQ(currentPtr);
 				
 				//Print one character from standard input device keyboard
 				System.out.println("The character in the GPR: " 
@@ -629,34 +633,418 @@ public class MTOPS extends HypoMachine{
 	}
 	
 	long searchAndRemovePCBfromWQ(long pid) {
-		return 0;
+		long currentPCBptr = WQ;
+		long previousPCBptr = END_OF_LIST;
+		
+		//Search WQ for a PCB that has the given pid
+		//If a match is found, remove it from SQ and return the PCB pointer
+		while(currentPCBptr != END_OF_LIST) {
+			if(memory[(int)currentPCBptr + PID] == pid) {
+				
+				//Match found, remove from WQ
+				if(previousPCBptr == END_OF_LIST) {
+					//First PCB
+					WQ = memory[(int)currentPCBptr + NEXT_PCB_PTR];
+				} else {
+					//Not first PCB
+					memory[(int)previousPCBptr + NEXT_PCB_PTR] 
+							= memory[(int)currentPCBptr + NEXT_PCB_PTR];
+				}
+				memory[(int)currentPCBptr + NEXT_PCB_PTR] = END_OF_LIST;
+				return currentPCBptr;
+			}
+			previousPCBptr = currentPCBptr;
+			currentPCBptr = memory[(int)currentPCBptr + NEXT_PCB_PTR];
+		}
+		System.out.println("PCB is not found in the WQ.");
+		return END_OF_LIST;
 	}
 	
 	public void initializeSystem() {
+		//Initialize all hardware components to zero: Main memory and CPU registers
 		
+		//Main memory
+		memory = new long[MEMORY_LIMIT];
+		
+		//General purpose registers
+		for(int i = 0; i < cpuRegisters.length; i++) {
+			cpuRegisters[i] = 0;
+		}
+		
+		mar = 0;
+		mbr = 0;
+		ir = 0;
+		pc = 0;
+		sp = 0;
+		psr = 0;
+		clock = 0;
+		
+		//Create user free list using the free block address
+		//and size given in the class
+		userFreeList = USER_FREE_LIST_START;
+		memory[(int)userFreeList + NEXT_PCB_PTR] = END_OF_LIST;
+		//Set the second location in the free block to be size of free block
+		
+		OSFreeList = OS_FREE_LIST_START;
+		memory[(int)OSFreeList + NEXT_PCB_PTR] = END_OF_LIST;
+		//Set the second location in the free block to be size of free block
+		
+		//Create a process
+		createProcess(null, 0);
 	}
 	
 	long CPUexecuteProgram() {
-		return 0;
+		
+		long timeLeft = TIMESLICE;
+		//Code from HW1
+		long startTime = System.nanoTime();
+		long opCode = -1;
+		long result = 0;
+		long remainder;
+		long status;
+		long op1Mode, op1Gpr, op2Mode, op2Gpr;
+		while (opCode != 0 && timeLeft > 0) {
+			
+			//Fetch Cycle
+			if(0 <= pc && pc <= MEMORY_LIMIT) {
+				mar = pc++;
+				mbr = memory[(int)mar];
+			} else {
+				System.err.println("Invalid memory address!");
+				return ERROR_INVALID_ADDR;
+			}
+		
+			ir = mbr;
+			
+			//Decode cycle
+			opCode = ir / 10000;
+			remainder = ir % 10000;
+			
+			op1Mode = remainder / 1000;
+			remainder = ir % 1000;
+			
+			op1Gpr = remainder / 100;
+			remainder = ir % 100;
+			
+			op2Mode = remainder / 10;
+			op2Gpr = remainder % 10;
+			
+			LongWrapper op1Address = new LongWrapper();
+			LongWrapper op1Value = new LongWrapper();
+			LongWrapper op2Address = new LongWrapper();
+			LongWrapper op2Value = new LongWrapper();
+			
+			//Execute cycle
+			switch((int)opCode) {
+				case 0: //Halt
+					System.out.println("Halt instruction is encounterred.");
+					clock += 12;
+					timeLeft -= 12;
+					return HALT;
+				case 1: //Add
+					status = fetchOperand(op1Mode, op1Gpr, op1Address, op1Value);
+					if(status != OKAY) {
+						System.out.println("Error while fetching operands!");
+						return status;
+					}
+					status = fetchOperand(op2Mode, op2Gpr, op2Address, op2Value);
+					if(status != OKAY) {
+						System.out.println("Error while fetching operands!");
+						return status;
+					}
+					result = op1Value.value + op2Value.value;
+					if (op1Mode == REGISTER_MODE) {
+						cpuRegisters[(int)op1Gpr] = result;
+					} else if (op1Mode == IMMEDIATE_MODE) {
+						System.out.println("Destination operand cannot be immediate value.");
+						return ERROR_IMMEDIATE_MODE;
+					} else {
+						memory[(int)op1Address.value] = result;
+					}
+					clock += System.nanoTime() - startTime;
+					break;
+				case 2: // Substract
+					status = fetchOperand(op1Mode, op1Gpr, op1Address, op1Value);
+					if(status != OKAY) {
+						System.out.println("Error while fetching operands!");
+						return status;
+					}
+					status = fetchOperand(op2Mode, op2Gpr, op2Address, op2Value);
+					if(status != OKAY) {
+						System.out.println("Error while fetching operands!");
+						return status;
+					}
+					result = op1Value.value - op2Value.value;
+					if (op1Mode == REGISTER_MODE) {
+						cpuRegisters[(int)op1Gpr] = result;
+					} else if (op1Mode == IMMEDIATE_MODE) {
+						System.out.println("Destination operand cannot be immediate value.");
+						return ERROR_IMMEDIATE_MODE;
+					} else {
+						memory[(int)op1Address.value] = result;
+					}
+					clock += System.nanoTime() - startTime;
+					break;
+				case 3: //Multiply
+					status = fetchOperand(op1Mode, op1Gpr, op1Address, op1Value);
+					if(status != OKAY) {
+						System.out.println("Error while fetching operands!");
+						return status;
+					}
+					status = fetchOperand(op2Mode, op2Gpr, op2Address, op2Value);
+					if(status != OKAY) {
+						System.out.println("Error while fetching operands!");
+						return status;
+					}
+					result = op1Value.value * op2Value.value;
+					if (op1Mode == REGISTER_MODE) {
+						cpuRegisters[(int)op1Gpr] = result;
+					} else if (op1Mode == IMMEDIATE_MODE) {
+						System.out.println("Destination operand cannot be immediate value.");
+						return ERROR_IMMEDIATE_MODE;
+					} else {
+						memory[(int)op1Address.value] = result;
+					}
+					clock += System.nanoTime() - startTime;
+					break;
+				case 4: //Divide
+					status = fetchOperand(op1Mode, op1Gpr, op1Address, op1Value);
+					if(status != OKAY) {
+						System.out.println("Error while fetching operands!");
+						return status;
+					}
+					status = fetchOperand(op2Mode, op2Gpr, op2Address, op2Value);
+					if(status != OKAY) {
+						System.out.println("Error while fetching operands!");
+						return status;
+					}
+					if (op2Value.value == 0) {
+						System.out.println("Divide by 0!");
+						return RUNTIME_ERROR;
+					}
+					result = op1Value.value / op2Value.value;
+					if (op1Mode == REGISTER_MODE) {
+						cpuRegisters[(int)op1Gpr] = result;
+					} else if (op1Mode == IMMEDIATE_MODE) {
+						System.out.println("Destination operand cannot be immediate value.");
+						return ERROR_IMMEDIATE_MODE;
+					} else {
+						memory[(int)op1Address.value] = result;
+					}
+					clock += System.nanoTime() - startTime;
+					break;
+				case 5: 
+					status = fetchOperand(op1Mode, op1Gpr, op1Address, op1Value);
+					if(status != OKAY) {
+						System.out.println("Error while fetching operands!");
+						return status;
+					}
+					status = fetchOperand(op2Mode, op2Gpr, op2Address, op2Value);
+					if(status != OKAY) {
+						System.out.println("Error while fetching operands!");
+						return status;
+					}
+					result = op2Value.value;
+					if (op1Mode == REGISTER_MODE) {
+						cpuRegisters[(int)op1Gpr] = result;
+					} else if (op1Mode == IMMEDIATE_MODE) {
+						System.out.println("Destination operand cannot be immediate value.");
+						return ERROR_IMMEDIATE_MODE;
+					} else {
+						memory[(int)op1Address.value] = result;
+					}
+					clock += System.nanoTime() - startTime;
+					break;
+				case 6: //Branch on jump instruction 
+					if (pc >= 0 && pc <= MEMORY_LIMIT) {
+						pc = memory[(int)pc];
+						clock += System.nanoTime() - startTime; 
+						break;
+					} else {
+						System.out.println("Memory is out of range!");
+						return ERROR_INVALID_ADDR;
+					}
+				case 7: //Branch on Minus
+					status = fetchOperand(op1Mode, op1Gpr, op1Address, op1Value);
+					if(status != OKAY) {
+						System.out.println("Error while fetching operands!");
+						return status;
+					}
+					if(op1Value.value < 0) {
+						if(pc >= 0 && pc <= MEMORY_LIMIT) {
+							pc = memory[(int)pc];
+							clock += System.nanoTime();
+							break;
+						} else {
+							System.out.println("Memory is out of range!");
+							return ERROR_INVALID_ADDR;
+						}
+					} else {
+						pc++;
+					}
+					break;
+				case 8: //Branch on plus
+					status = fetchOperand(op1Mode, op1Gpr, op1Address, op1Value);
+					if(status != OKAY) {
+						System.out.println("Error while fetching operands!");
+						return status;
+					}
+					if(op1Value.value > 0) {
+						if(pc >= 0 && pc <= MEMORY_LIMIT) {
+							pc = memory[(int)pc];
+							clock += System.nanoTime();
+							break;
+						} else {
+							System.out.println("Memory is out of range!");
+							return ERROR_INVALID_ADDR;
+						}
+					} else {
+						pc++;
+					}
+					break;
+				case 9: //Branch on zero
+					status = fetchOperand(op1Mode, op1Gpr, op1Address, op1Value);
+					if(status != OKAY) {
+						System.out.println("Error while fetching operands!");
+						return status;
+					}
+					if(op1Value.value == 0) {
+						if(pc >= 0 && pc <= MEMORY_LIMIT) {
+							pc = memory[(int)pc];
+							clock += System.nanoTime();
+							break;
+						} else {
+							System.out.println("Memory is out of range!");
+							return ERROR_INVALID_ADDR;
+						}
+					} else {
+						pc++;
+					}
+					break;
+				case 10: //push - if stack is not full
+					status = fetchOperand(op1Mode, op1Gpr, op1Address, op1Value);
+					if (status != OKAY) {
+						System.out.println("Error while fetching operands!");
+						return status;
+					}
+					if(sp >= STACK_UPPER_BOUND) {
+						System.out.println("Stack overflow error.");
+						return ERROR_STACK_OVERFLOW;
+					} else {
+						sp++;
+						memory[(int)sp] = op1Value.value;
+						break;
+					}
+				case 11: //Pop - if stack is not empty
+					if(sp < 0) {
+						System.out.println("Stack underflow error.");
+						return ERROR_STACK_UNDERFLOW;
+					} else {
+						sp--;
+						memory[(int)op1Address.value] = memory[(int)sp];
+					}
+					break;
+				case 12: //System call
+					status = fetchOperand(op1Mode, op1Gpr, op1Address, op1Value);
+					if(status < 0)
+						return status;
+					status = systemCall(op1Value.value);
+					clock += 12;
+					timeLeft -= 12;
+					break;									
+				default:
+					System.out.println("Invalid opcode!");
+					return ERROR_INVALID_OPCODE;
+			}
+		}
+		return OKAY;
 	}
 	
-	long SystemCall(long systemCallID) {
-		return 0;
+	long systemCall(long systemCallID) {
+		psr = OS_MODE;
+		
+		long status = OKAY;
+		switch((int)systemCallID) {
+			case 1: //Create process - user process is creating a child process
+				System.out.println("Create process system call not implemented!");
+				break;
+			case 2: //Delete process
+				System.out.println("Delete process system call is not implemented!");
+				break;
+			case 3: //Process Inquiry
+				System.out.println("Process inquiry system call is not implemented!");
+				break;
+			case 4: //Dynamic memory allocation: Allocate user free memory system call
+				status = memAllocSystemCall();
+				break;
+			case 5:
+				status = memAllocSystemCall();
+				break;
+			case 8: //io_getc system call
+				status = io_getCSystemCall();
+				break;
+			case 9: //io_putc system call
+				status = io_putCSystemCall();
+				break;
+			default:
+				System.out.println("Invalid system call ID!");
+				break;
+		}
+		psr = USER_MODE;
+		return status;
 	}
 	
 	long memAllocSystemCall() {
-		return 0;
+		long size = cpuRegisters[2];
+		
+		//Check size of 1 and change it to 2
+		if(size == 1) {
+			size = 2;
+		}
+		
+		cpuRegisters[1] = size;
+		if(cpuRegisters[1] < 0) {
+			//Set GPR0 to have the return status
+			cpuRegisters[0] = cpuRegisters[1];
+		} else {
+			cpuRegisters[0] = OKAY;
+		}
+		
+		//Display the status
+		System.out.println("Mem_alloc system call!");
+		System.out.println("GPR0: " + cpuRegisters[0] + "\n"
+						 + "GPR1: " + cpuRegisters[1] + "\n"
+						 + "GPR2: " + cpuRegisters[2]);
+		return cpuRegisters[0];
 	}
 	
 	long memFreeSystemCall() {
-		return 0;
+		
+long size = cpuRegisters[2];
+		//Check size of 1 and change it to 2
+		if(size == 1) {
+			size = 2;
+		}
+		
+		//Call free user memory(pass GPR1 and GPR2 as arguments)
+		cpuRegisters[0] = freeUserMemory(cpuRegisters[1], cpuRegisters[2]);
+		
+		//Display the status
+		System.out.println("Mem_alloc system call!");
+		System.out.println("GPR0: " + cpuRegisters[0] + "\n"
+						 + "GPR1: " + cpuRegisters[1] + "\n"
+						 + "GPR2: " + cpuRegisters[2]);
+		return cpuRegisters[0];
 	}
+	
 	
 	long io_getCSystemCall() {
-		return 0;
+		//Return start of input operation event code
+		return INPUT_OPERATION_EVENT;
 	}
 	
-	long io_putcSystemCall() {
-		return 0;
+	long io_putCSystemCall() {
+		//Return start of output operation event code
+		return OUTPUT_OPERATION_EVENT;
 	}
 }

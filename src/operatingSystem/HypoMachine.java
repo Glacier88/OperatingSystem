@@ -165,7 +165,7 @@ public class HypoMachine {
 				System.err.println("Invalid memory address!");
 				return ERROR_INVALID_ADDR;
 			}
-		}
+		
 		
 		ir = mbr;
 		
@@ -408,7 +408,7 @@ public class HypoMachine {
 				return ERROR_INVALID_OPCODE;
 			}
 		
-		
+		}
 		return OKAY;
 	}
 	
