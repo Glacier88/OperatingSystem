@@ -360,7 +360,7 @@ public class MTOPS extends HypoMachine{
 	//Return OK or error code
 	long freeOSmemory(long ptr, long size) {
 		if(ptr < 0 || ptr > OSFreeList) {
-			System.out.println("Invalid errmr message");
+			System.out.println("Invalid memory error.");
 			return ERROR_INVALID_ADDR;
 		}
 		//Check for minimum allocated size, which is 2 even if a user asks for 1 location
@@ -375,10 +375,14 @@ public class MTOPS extends HypoMachine{
 		//**What is this linked list?**
 		
 		
-		//Make the given free block point to free block pointed by the OS free list
-		//Set the free block size in the given free block
-		OSFreeList = ptr;
+		//Make the given free block point to free block pointed by the OS free list	
+		memory[(int)ptr + NEXT_PCB_PTR] = OSFreeList;
 		
+		//Set the free block size in the given free block
+		memory[(int)ptr + STACK_SIZE] = size;
+		
+		//Set OS Free list point to the given free block
+		OSFreeList = ptr;
 		return OKAY;
 	}
 	
@@ -458,7 +462,31 @@ public class MTOPS extends HypoMachine{
 	
 	//This is similar to FreeOSmemory
 	long freeUserMemory(long ptr, long size) {
-		return 0;
+		if(ptr < 0 || ptr > userFreeList) {
+			System.out.println("Invalid address error");
+			return ERROR_INVALID_ADDR;
+		}
+		//Check for minimum allocated size, which is 2 even if a user asks for 1 location
+		if(size == 1) {
+			size = 2;
+		//Invalid size
+		} else if (size < 1 || (ptr + size) >= MEMORY_LIMIT) {
+			System.out.println("Invalid size or address error.");
+			return ERROR_INVALID_ADDR;
+		}
+		//Return the memory to OS free space and insert at the beginning of the linked list
+		//**What is this linked list?**
+		
+		
+		//Make the given free block point to free block pointed by the user free list	
+		memory[(int)ptr + NEXT_PCB_PTR] = userFreeList;
+		
+		//Set the free block size in the given free block
+		memory[(int)ptr + STACK_SIZE] = size;
+		
+		//Set user Free list point to the given free block
+		userFreeList = ptr;
+		return OKAY;
 	}
 	
 	void checkAndProcessInterrupt() {
