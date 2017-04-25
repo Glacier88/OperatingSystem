@@ -52,11 +52,13 @@ public class MTOPS extends HypoMachine{
 	
 	private static final long DEFAULT_PRIORITY = 128;
 	private static final long READY_STATE = 1;
-	private static final long END_OF_LIST = 10000;
+	public static final long END_OF_LIST = 10000;
 	
 	//Constants of PCB states
 	private static final long WAITING = 1;
 	private static final long READY = 0;
+	
+	public static final long TIME_SLICE_EXPIRED = 0;
 	
 	private static final int PCB_SIZE = 22;	
 	//Initial stack size assigned to each process
@@ -985,7 +987,10 @@ public class MTOPS extends HypoMachine{
 					return ERROR_INVALID_OPCODE;
 			}
 		}
-		return OKAY;
+		if (timeLeft <= 0)
+			return TIME_SLICE_EXPIRED;
+		else
+			return OKAY;
 	}
 	
 	long systemCall(long systemCallID) {

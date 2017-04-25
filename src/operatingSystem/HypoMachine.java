@@ -502,7 +502,7 @@ public class HypoMachine {
 	//Input parameters:
 	//	String         String to be displayed
 	//	StarAddress    Start address of memory location
-	//	Size		   Number of locaions to dump
+	//	Size		   Number of locations to dump
 	//
 	//Output parameters
 	//	None
