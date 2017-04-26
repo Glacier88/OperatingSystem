@@ -44,8 +44,8 @@ public class MTOPS extends HypoMachine{
 	private static final long USER_MODE = 2;
 	private static final long OS_MODE = 1;
 	
-	private static final long INPUT_OPERATION_EVENT = 0;
-	private static final long OUTPUT_OPERATION_EVENT = 0;
+	public static final long INPUT_OPERATION_EVENT = -100;
+	public static final long OUTPUT_OPERATION_EVENT = -101;
 	
 	private static final int ERROR_NO_FREE_MEMORY = -10;
 	private static final int ERROR_INVALID_MEM_SIZE = -11;
