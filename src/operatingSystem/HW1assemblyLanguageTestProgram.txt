@@ -1,0 +1,8 @@
+Label       Mnemonic        Operands        Description
+--------------------------------------------------------------------------------
+main        Function                        Start of main function
+EvenSum     Long             0              Declare variable Sum and initialize it to 0
+Count       Long             50             Initialize loop counter to 50
+Element     Long             0              Declare variable Element and initialize it to 0
+Start       Move             R2, 0          Initialize R2 to 0 
+Loop        Add              R2, Count 
