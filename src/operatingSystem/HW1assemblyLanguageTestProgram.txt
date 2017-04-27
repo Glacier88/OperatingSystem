@@ -2,7 +2,20 @@ Label       Mnemonic        Operands        Description
 --------------------------------------------------------------------------------
 main        Function                        Start of main function
 EvenSum     Long             0              Declare variable Sum and initialize it to 0
-Count       Long             50             Initialize loop counter to 50
-Element     Long             0              Declare variable Element and initialize it to 0
+Count       Long             50             Initialize loop counter to 100
 Start       Move             R2, 0          Initialize R2 to 0 
-Loop        Add              R2, Count 
+Loop        Add              R2, Count      R2 = R2 + Count;
+			Subtract		 Count, 2       Count = Count - 2;
+			BrOnPlus         Count,Loop     If Count > 0, jump to Loop
+			Move			 Sum, R2		Sum = R2
+Temp		Long			 0				Declare variable Temp and initialize it to 0
+Final		Long			 0				Declare variable Final and initialize it to 0
+Start 		Move 			 R3, 550		Initialize R3 to 550
+			Subtract		 R3, Sum		R3 = R3 - Sum
+			Divide		     R3, 100	    R3 = R3 / 100
+			Multiply		 R3, 5      	R3 = R3 * 5
+			Move 			 Temp, R3       Temp = R3
+Branch1		Move			 Final, 1       Final = 1
+Branch2     Move             Final, 2       Final = 2
+			BrOnMinus        Temp, Branch1  If Temp < 0, Final = 1
+			BrOnPlus		 Temp, Branch2  If Temp > 0, Final = 2  
