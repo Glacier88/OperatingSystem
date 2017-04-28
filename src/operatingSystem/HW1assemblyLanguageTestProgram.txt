@@ -7,11 +7,11 @@ Start       Move             R2, 0          Initialize R2 to 0
 Loop        Add              R2, Count      R2 = R2 + Count;
 			Subtract		 Count, 2       Count = Count - 2;
 			BrOnPlus         Count,Loop     If Count > 0, jump to Loop
-			Move			 Sum, R2		Sum = R2
+			Move			 Sum, R2		EvenSum = R2
 Temp		Long			 0				Declare variable Temp and initialize it to 0
 Final		Long			 0				Declare variable Final and initialize it to 0
 Start 		Move 			 R3, 550		Initialize R3 to 550
-			Subtract		 R3, Sum		R3 = R3 - Sum
+			Subtract		 R3, Sum		R3 = R3 - EvenSum
 			Divide		     R3, 100	    R3 = R3 / 100
 			Multiply		 R3, 5      	R3 = R3 * 5
 			Move 			 Temp, R3       Temp = R3

@@ -1,0 +1,51 @@
+Address        Content           Comment
+-------------------------------------------
+0              0                 EvenSum Long 0; address starts at default 0
+1              100               Count Long 100; Variable Count set to 100
+2              51260             Start Move R2, 0; set R2 to 0
+3              0                 Immediate operand value of 0
+4              11250             Loop Add R2, Count; R2 = R2 + Count
+5              1                 Address of Count
+6              25060             Subtract Count, 2
+7              1                 Address of Count
+8              2                 Immediate operand value of 2
+9              85000             BrOnPlus Count, Loop
+10             1                 Address of Count
+11             4                 Loop address, Address of Add R2, Count instr. 
+12             55012             Move EvenSum, R2
+13             0                 Address of EvenSum
+14			   14                Temp Long 0, address starts at 14	
+15             15                Final Long 0, address starts at 15
+16             51360             Start Move R3, 0; set R3 to 0
+17             550				 Immediate operand value of 550
+18             21350             Subtract R3, EvenSum
+19             0                 Address of EvenSum
+20             41360             Divide R3, 100
+21             100               Immediate operand value of 100
+22             31360             Multiply R3, 5
+23             5                 Immediate operand value of 5
+24             55013             Move Temp, R3
+25             14                Address of Temp
+26             55000             Branch1, Move Final, 1
+27             15                Address of Final
+28             1                 Immediate operand value of 1
+29             55000   			 Branch2, Move Final, 2
+30			   15                Address of Final
+31             2				 Immediate value of 2
+32             850000			 BrOnPlus Temp, Branch1
+33			   14		   		 Address of Temp
+34             26                Branch1 address, Final = 1
+35             75000			 BranchOnMinus Temp, Branch2
+36			   14				 Address of Temp
+37             29				 Branch2 address, Final = 2
+38			   0				 Halt
+-1			   2				 End of program PC = 2
+
+  
+
+
+
+
+
+
+          
