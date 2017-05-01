@@ -1,0 +1,162 @@
+*****************************************************************
+*               Program 1: Create a null process		*
+*****************************************************************
+
+
+++++++++++++++++Assembly Language+++++++++++++++++++
+
+Label                Mnemonic            Operands              		Description
+_______________________________________________________________________________________
+CreateProcess        Function            fileName, Priority    		Start of CreateProcess function
+allocatedMemory	     Long		 0				Initialize PCBptr to 0
+allocateOSMemory     Function            0                     		Start of allocateOSMemory function
+PCBptr               Long                0                     		Initialize PCBptr to 0
+		     Move                allocatedMemory, PCBptr   	Move allocatedMmory to PCBptr variable
+initializePCB	     Function		 PCBptr				Initialize PCB passing PCBptr as argument
+value		     Long		 0				Initialize value to 0
+absoluteLoader	     Function		 fileName			Calling absolute loader passing file name as arguments
+		     Move		 value, PCBptr + PC   		Set value to the PC value in PCBptr
+ptr		     Long 		 0				Initialize ptr to 0
+		     Move		 ptr, StackSize			Set ptr to StackSize
+Branch		     Function	         freeOSmemory			Branch, free allocated PCB space	
+		     BrOnMinus	         ptr				if ptr < 0, jump to Branch
+		     Long	         SP				Initialize SP to 0
+		     Move	         SP, PTR + StackSize		Set SP in the PCB to ptr + stack size
+		     Move		 PTR + StackStart, ptr		Set stack start address to ptr
+		     Move 		 PCB, priority			Set priority in the PCB
+printPCB	     Function	         PCB				print PCB passing PCBptr	
+		     Halt				 		Stop execution
+		     End		 				Execution ends
+
+
+++++++++++++++++++++Machine Language with Comments++++++++++++++++++++++++++++++
+
+Address           Content                 Comment
+_____________________________________________________________________________
+0                  0                      allocateMemory Long 0; address start at 0
+1                  1                      Call the allocateOSMemory Function
+2                  2			  PCBptr Long 0; address start at 2
+3		   56060                  Set allocatedMemory to PCBptr
+4		   0			  Address of allocatedMemory
+5		   2			  Address of PCBptr
+6		   0			  value Long 0: address start at 0
+7	       	   0			  Call the initialize PCB function
+8		   0                      Call the absoluteLoader function
+9		   56060		  Move value to PCBptr + PC
+10		   2			  Address of PCBptr
+11		   6			  Address of value	
+12		   0			  Initialize ptr to 0
+13		   51260		  Set ptr to StackSize
+14		   12			  Address of ptr
+15		   55000		  Branch, move ptr 0
+16		   12			  Address of ptr
+17		   18			  Call the freeOSMemory function
+18		   0			  Initialize SP to 0
+19		   51260		  Set SP in the PCB to ptr + stack size
+20		   18			  Address of SP
+21		   56012		  Set ptr to stack start
+22		   12			  Address of ptr
+23		   0			  Initialize priority to 0
+23		   56060                  Set priority in the PCB
+24		   2			  Address of PCBptr
+25		   23			  Address of priority
+26		   0			  Call the printPCB function
+27		   0		          Halt
+-1		   2			  End of program, PC = 2	 
+
+            
+
+++++++++++++++++++++Symbol Table++++++++++++++++++++++++++++++
+
+Symbol                Value
+____________________________
+createProcess           0
+allocatedMemory         0
+allocateOSMemory        1
+PCBptr			2
+value			6
+initializePCB		7			 					 
+absoluteLoader		8	
+ptr			12	
+Branch			15	
+SP    			18
+priority		23
+printPCB		26
+
+
+*********************************************************************************
+*               Program 2: Dynamic memory allocation and freeing	        *
+*********************************************************************************
+
+
+++++++++++++++++Assembly Language+++++++++++++++++++
+
+Label                    Mnemonic            Operands              	  Description
+___________________________________________________________________________________________________
+allocateUserMemory	 Function	    requestedSize		  Start of allocatedUserMemory
+			 BrOnMinus	    requestedSize                 Branch, display 
+Branch1			 HALT 						  Terminate the program when the requested size is incorrect
+currentPtr	   	 Long		    0				  Initialize the currentPtr to 0
+			 Move		    currentPtr, OSFreeList        Set currentPtr to OSFreeList
+			 BrOnZero	    currentPtr, EndOfList	  if currentPtr!=EndOfList, Jump to Loop
+Loop   			 Long		    0			          Initialize OS Free list
+			 Move		    OS Free List, currentPtr	  Set currentPtr to OS free list
+			 Move 		    currentPtr, End of list	  Set end of list to currentPtr
+			 Halt						  Stop execution
+freeUserMemory		 Function	    ptr, size			  Start of freeOSmemory function
+			 Move		    ptr, NEXT_PCB_PTR             set userFreeList to NEXT_PCB_PTR
+			 Move		    size, STACK_SIZE		  set Stack_size to size
+			 Move		    ptr, userFreeList		  set ptr to userFreeList
+			 Halt		    				  Stop execution
+			 End		    				  Execution ends
+
+
+*********************************************************************************
+*               	  Program 3: Using Stack			        *
+*********************************************************************************
+
+			    	
+++++++++++++++++Assembly Language+++++++++++++++++++					 
+
+
+Label                    Mnemonic            Operands              	  Description
+___________________________________________________________________________________________________
+Loop,N			 Long			40			    Set N to 40
+			 BrOnPlus		N			    If N > 0, N--, else Halt			    
+cpuExecuteProgram        Push                   101			    Push to the stack
+			 Push		        102                   	    Push to the stack
+			 Push                   103                         Push to the stack
+			 Push			104			    Push to the stack
+cpuExecuteProgram	 Pop		        			    Pop from the stack
+			 Pop						    Pop from the stack					 
+			 Pop						    Pop from the stack
+			 Pop						    Pop from the stack
+			 Halt						    Stop execution
+			 End						    Execution starts at Loop
+
+
+
+
+*********************************************************************************
+*                 Program 4: Performing IO operations			        *
+*********************************************************************************
+
+
+
+++++++++++++++++Assembly Language+++++++++++++++++++					 
+
+
+Label                    Mnemonic            Operands              	  Description
+___________________________________________________________________________________________________________
+currentPtr		 Long		     0				  Initialize currentPtr to 0
+allocateOSmemory	 Function	     10				  Call the allocateOSmemory function
+			 Move		     R1			          Set currentPtr to R1
+cpuExecuteProgram        io_getCsystem					  Read in word into the allocated memory
+cpuExecuteProgram	 io_putCsystem					  Print the word read in
+freeOSmemory		 Function					  Call the freeOSmemory function
+			 Halt						  Stop Execution
+			 End						  End execution
+
+					 				  
+				     
+

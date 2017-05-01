@@ -5,16 +5,22 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 public class MTOPS extends HypoMachine{
+	//The ID of process
 	int processID;
 	
+	//Pointer for waiting list, ready list, OS free list and user free list
 	long WQ = 0;
 	long RQ = 0;
 	long OSFreeList = 0;
 	long userFreeList = 0;
 	
+	//Constant: User free list start
 	private static final int USER_FREE_LIST_START = 0;
-	private static final int OS_FREE_LIST_START = 0;
 	
+	//Constant: OS free list start
+	private static final int OS_FREE_LIST_START = 5000;
+	
+	//Time slice for a progam
 	private static final long TIMESLICE = 200;
 	
 	//Index of PCB array
@@ -40,30 +46,52 @@ public class MTOPS extends HypoMachine{
 	private static final int PC = 20;
 	private static final int PSR = 21;
 	
-	//PSR mode
+	//PSR mode: User mode and OS mode
 	private static final long USER_MODE = 2;
 	private static final long OS_MODE = 1;
 	
+	//Event code of input operation and output operation
 	public static final long INPUT_OPERATION_EVENT = -100;
 	public static final long OUTPUT_OPERATION_EVENT = -101;
 	
+	//Error code of no free memory
 	private static final int ERROR_NO_FREE_MEMORY = -10;
+	
+	//Error code of invalid memory size
 	private static final int ERROR_INVALID_MEM_SIZE = -11;
 	
+	//Default process priority
 	private static final long DEFAULT_PRIORITY = 128;
+	
+	//Ready state
 	private static final long READY_STATE = 1;
+	
+	//Constant: End of list
 	public static final long END_OF_LIST = 10000;
 	
 	//Constants of PCB states
 	private static final long WAITING = 1;
 	private static final long READY = 0;
 	
+	//Status code of time slice expired
 	public static final long TIME_SLICE_EXPIRED = 0;
 	
+	//PCB size
 	private static final int PCB_SIZE = 22;	
+	
 	//Initial stack size assigned to each process
 	private static final int STACK_SIZE = 32;
 	
+	/**
+	 * Function: createProcess
+	 * 
+	 * Task Description: Create process given file name and priority
+	 * 
+	 * Input arguments: program file name and priority
+	 * 
+	 * Output arguments: Status code
+	 * 
+	 */
 	long createProcess(String fileName,long priority) {
 		long PCBptr = allocateOSmemory(PCB_SIZE);
 		initializePCB(PCBptr);
@@ -100,6 +128,15 @@ public class MTOPS extends HypoMachine{
 		return OKAY;
 	}
 	
+	/**
+	 * Function name: initializePCB
+	 * 
+	 * Task Description: Initialize all fields of a PCB block
+	 * 
+	 * Input arguments: the pointer to a PCB block
+	 * 
+	 * Output argument: None
+	 */
 	void initializePCB(long PCBptr) {
 		
 		//Set entire PCB area to 0
@@ -134,6 +171,15 @@ public class MTOPS extends HypoMachine{
 		memory[(int)PCBptr + NEXT_PCB_PTR] = END_OF_LIST;
 	}
 	
+	/**
+	 * Function name: printPCB
+	 * 
+	 * Task Description: Print all fields of a PCB block to the console
+	 * 
+	 * Input arguments: The pointer to a PCB block
+	 * 
+	 * Output arguments: None
+	 */
 	void printPCB(long PCBptr) {
 		System.out.println("PCB address = " + PCBptr);
 		System.out.println("Next PCB ptr = " + NEXT_PCB_PTR);
@@ -159,6 +205,18 @@ public class MTOPS extends HypoMachine{
 		System.out.println("PSR = " + PSR);
 	}
 	
+	/**
+	 * Function name: printQueue
+	 * 
+	 * Task description: Print all fields of a queue(ready queue or wait queue)
+	 * 
+	 * 
+	 * Input arguments: The pointer to the queue to be printed
+	 * 
+	 * Output arguments: None
+	 * 
+	 * Function return value: Status code
+	 */
 	long printQueue(long Qptr) {
 		long currentPCBptr = Qptr;
 		if (currentPCBptr == END_OF_LIST) {
@@ -172,6 +230,15 @@ public class MTOPS extends HypoMachine{
 		return OKAY;
 	}
 	
+	/**
+	 * Function name: insertIntoReadyQ
+	 * 
+	 * Task Description: Insert a process to the top of a ready queue
+	 * 
+	 * Input arguments: The pointer of a given PCB
+	 * 
+	 * Output arguments: Status code
+	 */
 	long insertIntoReadyQ(long PCBptr) {
 		
 		//Insert PCB according to Round Robin.
@@ -217,6 +284,15 @@ public class MTOPS extends HypoMachine{
 		return OKAY;
 	}
 	
+	/**
+	 * Function name: insertIntoWQ
+	 * 
+	 * Task description: Insert a process into a wait queue
+	 * 
+	 * Input argument: The pointer to a given process
+	 * 
+	 * Function return value: Status code
+	 */
 	long insertIntoWQ(long PCBptr) {
 		if(PCBptr < 0 || PCBptr > MEMORY_LIMIT) {
 			System.out.println("Invalid PCB error message!");
@@ -228,6 +304,15 @@ public class MTOPS extends HypoMachine{
 		return OKAY;
 	}
 	
+	/**
+	 * Function name: selectProcessFromRQ
+	 * 
+	 * Task description: select a process from Ready Queue
+	 * 
+	 * Input arguments: None
+	 * 
+	 * Function return value: the pointer to the selected PCB
+	 */
 	long selectProcessFromRQ() {
 		long PCBptr = RQ;
 		if(RQ != END_OF_LIST) {
@@ -237,6 +322,15 @@ public class MTOPS extends HypoMachine{
 		return PCBptr;
 	}
 	
+	/**
+	 * Function name: saveContext
+	 * 
+	 * Task Description: Save context of a given PCB
+	 * 
+	 *  Input arguments: the pointer to a PCB that is to be saved 
+	 *  
+	 *  Function return value: None
+	 */
 	void saveContext(long PCBptr) {
 		
 		memory[(int)PCBptr + GPR0] = cpuRegisters[0];
@@ -253,6 +347,15 @@ public class MTOPS extends HypoMachine{
 		memory[(int)PCBptr + PC] = pc;
 	}
 	
+	/**
+	 * Function name: dispatcher
+	 * 
+	 * Task description: Performs the restore context operation
+	 * 
+	 * Input arguments: the pointer to a given PCB 
+	 * 
+	 * Function return value: None
+	 */
 	void dispatcher(long PCBptr) {
 		
 		//Copy CPU GPR register values from PCB to CPU registers
@@ -273,7 +376,16 @@ public class MTOPS extends HypoMachine{
 		psr = USER_MODE;
 	}
 	
-	//Recover all resources allocated to the process
+	/**
+	 * Function name: terminateProcess
+	 * 
+	 * Task description: Terminate a process and 
+	 * recover all resources allocated to the process 
+	 * 
+	 * Input arguments: The pointer to a PCB
+	 * 
+	 * Function return value: None
+	 */	
 	void terminateProcess(long PCBptr) {
 		//Return stack memory using stack start address and stack size
 		long i = memory[(int)PCBptr + STACK_START_ADDR];
@@ -284,6 +396,15 @@ public class MTOPS extends HypoMachine{
 		memory[(int)PCBptr + NEXT_PCB_PTR] = 0;
 	}
 	
+	/**
+	 * Function name: allocateOSmemory
+	 * 
+	 * Task description: allocate memory from OS with a requested size
+	 * 
+	 * Input arguments: The size requested 
+	 * 
+	 * Output arguments: The pointer to the allocated memory block or error code
+	 */
 	long allocateOSmemory(long requestedSize) {
 		if(OSFreeList == END_OF_LIST) {
 			System.out.println("No free OS memory!");
@@ -359,7 +480,16 @@ public class MTOPS extends HypoMachine{
 		return ERROR_NO_FREE_MEMORY;
 	}
 	
-	//Return OK or error code
+	/**
+	 * Function name: freeOSmemory
+	 * 
+	 * Task description: Free the memory at a given PCB pointer
+	 * 
+	 * Input arguments: pointer to a given PCB block and the size of it
+	 * 
+	 * Output arguments: Status code
+	 * 
+	 */
 	long freeOSmemory(long ptr, long size) {
 		if(ptr < 0 || ptr > OSFreeList) {
 			System.out.println("Invalid memory error.");
@@ -388,6 +518,16 @@ public class MTOPS extends HypoMachine{
 		return OKAY;
 	}
 	
+	/**
+	 * Function name: allocatedUserMemory
+	 * 
+	 * Task description: allocate Memory to user
+	 * 
+	 * Input arguments: The size of memory to request
+	 *
+	 * Output arguments: The pointer to the allocated memory or an error code
+	 * @return
+	 */
 	long allocateUserMemory(long requestedSize) {
 		if(userFreeList == END_OF_LIST) {
 			System.out.println("No free OS memory!");
@@ -462,7 +602,16 @@ public class MTOPS extends HypoMachine{
 	}
 	
 	
-	//This is similar to FreeOSmemory
+	/**
+	 * Function name: freeUserMemory
+	 * 
+	 * Task Description: free user memory given the pointer and size
+	 * 
+	 * Input arguments: the pointer of the memory block to free and its size
+	 * 
+	 * Function return value: Status code
+	 * @return
+	 */
 	long freeUserMemory(long ptr, long size) {
 		if(ptr < 0 || ptr > userFreeList) {
 			System.out.println("Invalid address error");
@@ -491,6 +640,16 @@ public class MTOPS extends HypoMachine{
 		return OKAY;
 	}
 	
+	/**
+	 * Function name: checkAndProcessInterrupt
+	 * 
+	 * Task description: Read interrupt ID number, and based on the 
+	 * interrupt ID, service the interrupt
+	 * 
+	 *  Input arguments: None
+	 *  
+	 *  Function return value: None
+	 */
 	void checkAndProcessInterrupt() {
 		int interruptId = 0;
 		
@@ -528,6 +687,16 @@ public class MTOPS extends HypoMachine{
 		
 	}
 	
+	/**
+	 * Function name: ISRrunProgramInterrupt
+	 * 
+	 * Task Description: Read file name and create process, 
+	 * which creates an interrupt
+	 * 
+	 * Input arguments: None
+	 * 
+	 * Output arguments: None
+	 */
 	void ISRrunProgramInterrupt() {
 		System.out.println("Please input file name: ");
 		String fileName = null;
@@ -541,6 +710,17 @@ public class MTOPS extends HypoMachine{
 		createProcess(fileName,DEFAULT_PRIORITY);
 	}
 	
+	/**
+	 * Function name: ISRinputCompletionInterrupt
+	 * 
+	 * Task Description: Read PID of the process completing the io_getc operation 
+	 * and read one character from the keyboard. Store the character in the GPR 
+	 * of the process
+	 * 
+	 * Input arguments: None
+	 * 
+	 * Function return value: None
+	 */
 	void ISRinputCompletionInterrupt() {
 		System.out.println("Please input a process ID: ");
 		int processID = 0;
@@ -597,6 +777,18 @@ public class MTOPS extends HypoMachine{
 		System.out.println("Invalid process ID!");
 	}
 	
+	/**
+	 * Function name: ISRoutputCompletionInterrupt
+	 * 
+	 * Task description: Read PID of the process completing the i0_putc operation
+	 * and display one character on the monitor from the GPR in the PCB of 
+	 * the process
+	 * 
+	 * Input arguments: None
+	 *  
+	 * Output arguments: None
+	 *  
+	 */
 	void ISRoutputCompletionInterrupt() {
 		System.out.println("Please input a process ID: ");
 		int processID = 0;
@@ -643,6 +835,17 @@ public class MTOPS extends HypoMachine{
 		System.out.println("Invalid process ID!");
 	}
 	
+	/**
+	 * Function name: ISRshutdownSystem
+	 * 
+	 * Task description: Terminate all processes in RQ and WQ and 
+	 * exit from the program. This is the only place that 
+	 * the operating system should exit 
+	 * 
+	 * Input arguments: None
+	 * 
+	 * Function return value: None
+	 */
 	void ISRshutdownSystem() {
 		long ptr = RQ;
 		
@@ -662,6 +865,18 @@ public class MTOPS extends HypoMachine{
 		
 	}
 	
+	/**
+	 * Function name: searchAndRemovePCBfromWQ
+	 * 
+	 * Task description: Search the WQ for the matching pid. When a
+	 * match is found remove it from WQ and return PCB pointer.
+	 * If no match is found, return invalid pid error code
+	 * 
+	 * Input arguments: process ID
+	 * 
+	 * Function return value: The memory pointer of a found process or error code 
+	 * 
+	 */
 	long searchAndRemovePCBfromWQ(long pid) {
 		long currentPCBptr = WQ;
 		long previousPCBptr = END_OF_LIST;
@@ -690,6 +905,12 @@ public class MTOPS extends HypoMachine{
 		return END_OF_LIST;
 	}
 	
+	/**
+	 * Function name: initializeSystem
+	 * 
+	 * Task description: Initialize system function to create OS free list, 
+	 * user free and null process with lowest priority.
+	 */
 	public void initializeSystem() {
 		//Initialize all hardware components to zero: Main memory and CPU registers
 		
@@ -723,6 +944,15 @@ public class MTOPS extends HypoMachine{
 		createProcess(null, 0);
 	}
 	
+	/**
+	 * Function name: CPUexecuteProgram
+	 * 
+	 * Task description: execute calculations 
+	 * 
+	 * Input arguments: None
+	 * 
+	 * Function return value: Status code
+	 */
 	long CPUexecuteProgram() {
 		
 		long timeLeft = TIMESLICE;
@@ -993,6 +1223,15 @@ public class MTOPS extends HypoMachine{
 			return OKAY;
 	}
 	
+	/**
+	 * Function name: systemCall
+	 * 
+	 * Task description: Launch system calls according to the given call ID
+	 * 
+	 * Input arguments: The ID of system call
+	 * 
+	 * Output arguments: Status of system call.
+	 */
 	long systemCall(long systemCallID) {
 		psr = OS_MODE;
 		
@@ -1027,6 +1266,16 @@ public class MTOPS extends HypoMachine{
 		return status;
 	}
 	
+	/**
+	 * Function name: memAllocSystemCall
+	 * 
+	 * Task description: Allocate memory from user free list
+	 * 
+	 * Input arguments: None
+	 * 
+	 * Function return value: Return status from the function is either the 
+	 * address of allocated memory or an error code
+	 */
 	long memAllocSystemCall() {
 		long size = cpuRegisters[2];
 		
@@ -1051,9 +1300,20 @@ public class MTOPS extends HypoMachine{
 		return cpuRegisters[0];
 	}
 	
+	/**
+	 * Function name: memFreeSystemCall
+	 * 
+	 * Task description: Return the dynamically allocated user free memory
+	 * to the user free list. GPR1 has memory address and GPR2 has the memory size
+	 * to be released. Return status is in the GPR0
+	 * 
+	 * Input arguments: None
+	 * 
+	 * Output arguments: The value of GPR0
+	 */
 	long memFreeSystemCall() {
 		
-long size = cpuRegisters[2];
+		long size = cpuRegisters[2];
 		//Check size of 1 and change it to 2
 		if(size == 1) {
 			size = 2;
@@ -1071,11 +1331,29 @@ long size = cpuRegisters[2];
 	}
 	
 	
+	/**
+	 * Function name: io_getCSystemCall
+	 * 
+	 * Task description: instruct device to do the io_getc operation
+	 * 
+	 * Input arguments: None
+	 * 
+	 * Function return value: start of input operation event code
+	 */
 	long io_getCSystemCall() {
 		//Return start of input operation event code
 		return INPUT_OPERATION_EVENT;
 	}
 	
+	/**
+	 * Function name: io_puttCSystemCall
+	 * 
+	 * Task description: instruct device to do the io_putc operation
+	 * 
+	 * Input arguments: None
+	 * 
+	 * Function return value: start of output operation event code
+	 */
 	long io_putCSystemCall() {
 		//Return start of output operation event code
 		return OUTPUT_OPERATION_EVENT;

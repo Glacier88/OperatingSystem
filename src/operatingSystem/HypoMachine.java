@@ -214,7 +214,7 @@ public class HypoMachine {
 				}
 				clock += System.nanoTime() - startTime;
 				break;
-			case 2: // Substract
+			case 2: // Subtract
 				status = fetchOperand(op1Mode, op1Gpr, op1Address, op1Value);
 				if(status != OKAY) {
 					System.out.println("Error while fetching operands!");
